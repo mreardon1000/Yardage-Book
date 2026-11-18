@@ -1,0 +1,1732 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#1e3b31">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="manifest" href="./manifest.webmanifest">
+    <link rel="icon" href="./icons/icon-192.png" type="image/png">
+    <link rel="apple-touch-icon" href="./icons/icon-192.png">
+    <title>Golf Yardage Card &amp; Gapping Matrix</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        mono: ['IBM Plex Mono', 'monospace']
+                    },
+                    colors: {
+                        fairway: {
+                            50: '#f2f8f5',
+                            100: '#dfeee6',
+                            200: '#c1ddd0',
+                            300: '#96c4b0',
+                            400: '#64a38a',
+                            500: '#41866c',
+                            600: '#2f6b55',
+                            700: '#265645',
+                            800: '#214539',
+                            900: '#1e3b31',
+                            950: '#0f201a'
+                        }
+                    }
+                }
+            }
+        };
+    </script>
+    <style>
+        /* Hide number input spin buttons for clean tabular yardage cells */
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        input[type="number"] {
+            -moz-appearance: textfield;
+        }
+
+        .cell-input {
+            transition: background-color 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease;
+        }
+        .cell-input:focus {
+            box-shadow: 0 0 0 3px rgba(65, 134, 108, 0.25);
+        }
+
+        /* Custom styled course select matching profile & toolbar controls */
+        .course-select {
+            appearance: none;
+            -webkit-appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 0.5rem center;
+            background-size: 0.875rem 0.875rem;
+            transition: background-color 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease;
+        }
+        .course-select:hover {
+            border-color: #475569;
+            background-color: #090d16;
+        }
+        .course-select:focus {
+            box-shadow: 0 0 0 3px rgba(65, 134, 108, 0.25);
+        }
+
+        .print-conditions-chip {
+            display: none;
+        }
+
+        /* Print Styles: Pocket Yardage Card Layout (4" x 6") on Letter Paper */
+        @media print {
+            @page {
+                size: letter portrait;
+                margin: 0.4in;
+            }
+            body {
+                background: #ffffff !important;
+                color: #0f172a !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+            .no-print {
+                display: none !important;
+            }
+            .print-sheet {
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                width: 100% !important;
+            }
+            .print-container {
+                width: 4in !important;
+                min-width: 4in !important;
+                max-width: 4in !important;
+                height: 6in !important;
+                min-height: 6in !important;
+                max-height: 6in !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                box-shadow: none !important;
+                border: 2px solid #1e3b31 !important;
+                border-radius: 8px !important;
+                background: #ffffff !important;
+                display: flex !important;
+                flex-direction: column !important;
+                overflow: hidden !important;
+                box-sizing: border-box !important;
+                break-inside: avoid !important;
+                page-break-inside: avoid !important;
+            }
+            .print-header {
+                background-color: #1e3b31 !important;
+                color: #ffffff !important;
+                padding: 5px 7px !important;
+                border-bottom: 1.5px solid #1e3b31 !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: space-between !important;
+                gap: 5px !important;
+                flex: 0 0 auto !important;
+            }
+            .print-header-left {
+                display: flex !important;
+                align-items: center !important;
+                gap: 5px !important;
+                min-width: 0 !important;
+                flex: 1 1 auto !important;
+            }
+            .print-header h2 {
+                display: block !important;
+                font-size: 12px !important;
+                line-height: 1.15 !important;
+                letter-spacing: 0.01em !important;
+                color: #ffffff !important;
+                white-space: nowrap !important;
+                overflow: hidden !important;
+                text-overflow: ellipsis !important;
+            }
+            .print-header p {
+                display: none !important;
+            }
+            #card-profile-badge {
+                background-color: rgba(255, 255, 255, 0.16) !important;
+                color: #ffffff !important;
+                border-color: rgba(255, 255, 255, 0.35) !important;
+                font-size: 10.5px !important;
+                line-height: 1.15 !important;
+                padding: 2px 6px !important;
+                border-radius: 5px !important;
+                flex-shrink: 0 !important;
+            }
+            .print-conditions-chip {
+                display: flex !important;
+                flex-direction: column !important;
+                align-items: center !important;
+                justify-content: center !important;
+                background-color: rgba(255, 255, 255, 0.12) !important;
+                border: 1px solid rgba(255, 255, 255, 0.28) !important;
+                border-radius: 6px !important;
+                padding: 2.5px 6px !important;
+                color: #ffffff !important;
+                font-family: 'IBM Plex Mono', monospace !important;
+                line-height: 1.15 !important;
+                white-space: nowrap !important;
+                flex-shrink: 0 !important;
+            }
+            .print-conditions-line1 {
+                font-size: 9.5px !important;
+                font-weight: 600 !important;
+                color: #ffffff !important;
+            }
+            .print-conditions-line2 {
+                font-size: 9.5px !important;
+                font-weight: 700 !important;
+                color: #e2e8f0 !important;
+            }
+            .print-container > div.table-scroll-wrap {
+                flex: 1 1 auto !important;
+                overflow: hidden !important;
+                display: flex !important;
+            }
+            table {
+                width: 100% !important;
+                height: 100% !important;
+                table-layout: fixed !important;
+                border-collapse: collapse !important;
+                font-size: 13px !important;
+            }
+            th {
+                background-color: #f2f8f5 !important;
+                color: #1e3b31 !important;
+                border-bottom: 1.25px solid #1e3b31 !important;
+                padding: 2.5px 1px !important;
+                font-size: 10.5px !important;
+                line-height: 1.15 !important;
+                letter-spacing: 0 !important;
+                width: auto !important;
+                white-space: nowrap !important;
+            }
+            th:first-child {
+                padding-left: 3px !important;
+                text-align: center !important;
+            }
+            th:last-of-type {
+                padding-right: 3px !important;
+            }
+            th span {
+                color: #1e3b31 !important;
+            }
+            td {
+                background-color: #ffffff !important;
+                border-bottom: 1px solid #cbd5e1 !important;
+                padding: 0.5px 1px !important;
+                line-height: 1.1 !important;
+                color: #0f172a !important;
+                width: auto !important;
+                white-space: nowrap !important;
+            }
+            tr:last-child td {
+                border-bottom: none !important;
+            }
+            td:first-child {
+                padding-left: 3px !important;
+                text-align: center !important;
+            }
+            td:nth-child(3) {
+                background-color: #f2f8f5 !important;
+            }
+            tr:nth-child(even) td {
+                background-color: #f8fafc !important;
+            }
+            tr:nth-child(even) td:nth-child(3) {
+                background-color: #e6f2ec !important;
+            }
+            input {
+                color: #0f172a !important;
+                background: transparent !important;
+                font-weight: 700 !important;
+                font-size: 13px !important;
+                line-height: 1.1 !important;
+                padding: 0 !important;
+                border: none !important;
+                width: 100% !important;
+                min-width: 0 !important;
+            }
+            td:first-child input {
+                width: 100% !important;
+                text-align: center !important;
+                font-weight: 700 !important;
+                font-size: 13px !important;
+            }
+            .gap-badge {
+                border: 1px solid #94a3b8 !important;
+                color: #0f172a !important;
+                background: #f1f5f9 !important;
+                font-size: 12px !important;
+                font-weight: 700 !important;
+                line-height: 1.05 !important;
+                padding: 1.5px 4px !important;
+                border-radius: 4px !important;
+            }
+            .print-hide-col,
+            [data-col-key="gap"] {
+                display: none !important;
+            }
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen antialiased selection:bg-fairway-500 selection:text-white">
+
+    <!-- Main Container -->
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
+
+        <!-- Top Action & Header Bar -->
+        <header class="no-print flex flex-col gap-4 mb-6">
+            <!-- Top Row: Brand Title & Action Toolbar -->
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-fairway-500 to-fairway-800 flex items-center justify-center shadow-lg shadow-fairway-950/50 border border-fairway-400/20 shrink-0">
+                        <!-- Golf Flag SVG Icon -->
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 21V4m0 0l11 3.5L4 11m12 10a4 4 0 100-8 4 4 0 000 8z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2.5">
+                            <h1 class="text-xl sm:text-2xl font-bold tracking-tight text-white">Yardage Card</h1>
+                            <!-- Auto-Save Indicator Badge -->
+                            <span id="save-indicator" class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-fairway-900/80 text-fairway-300 border border-fairway-700/60 transition-opacity duration-300">
+                                <span id="save-dot" class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                                <span id="save-text">Saved</span>
+                            </span>
+                        </div>
+                        <p class="text-xs sm:text-sm text-slate-400 mt-0.5">Click any cell to edit. Use <kbd class="px-1.5 py-0.5 text-[11px] font-mono bg-slate-800 text-slate-300 rounded border border-slate-700">Tab</kbd>, <kbd class="px-1.5 py-0.5 text-[11px] font-mono bg-slate-800 text-slate-300 rounded border border-slate-700">Enter</kbd>, or arrow keys to navigate.</p>
+                    </div>
+                </div>
+
+                <!-- Utility Toolbar -->
+                <div class="flex flex-wrap items-center gap-2 shrink-0">
+                    <input type="file" id="csv-file-input" accept=".csv,text/csv" class="hidden" aria-hidden="true">
+
+                    <button id="btn-import" type="button" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs sm:text-sm font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition shadow-sm active:scale-[0.99]">
+                        <svg class="w-4 h-4 text-fairway-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+                        </svg>
+                        Import CSV
+                    </button>
+
+                    <button id="btn-export" type="button" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs sm:text-sm font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition shadow-sm active:scale-[0.99]">
+                        <svg class="w-4 h-4 text-fairway-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                        </svg>
+                        Export CSV
+                    </button>
+
+                    <button id="btn-print" type="button" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-medium bg-fairway-600 hover:bg-fairway-500 text-white border border-fairway-500/50 transition shadow-sm shadow-fairway-950 active:scale-[0.99]">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
+                        </svg>
+                        Print / Card
+                    </button>
+
+                    <button id="btn-clear" type="button" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs sm:text-sm font-medium bg-slate-900 hover:bg-rose-950/60 text-slate-400 hover:text-rose-300 border border-slate-800 hover:border-rose-800/60 transition active:scale-[0.99]">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                        </svg>
+                        Clear
+                    </button>
+                </div>
+            </div>
+
+            <!-- Second Row: Uniform Golfer Profile Control Bar -->
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 bg-slate-900/90 border border-slate-800 px-3.5 py-2.5 rounded-xl shadow-sm">
+                <!-- Left: Profile Tabs + Add Profile Button -->
+                <div class="flex items-center gap-2 min-w-0">
+                    <span class="text-[11px] font-semibold uppercase tracking-wider text-slate-500 shrink-0 hidden md:inline">Profiles:</span>
+                    <div id="profile-tabs-list" class="flex flex-wrap items-center gap-1.5" role="tablist" aria-label="Golfer Profiles"></div>
+                    <button id="btn-add-profile" type="button" title="Add new golfer profile" aria-label="Add new golfer profile" class="inline-flex items-center gap-1 h-8 px-2.5 rounded-lg text-xs font-medium text-slate-300 hover:text-fairway-300 bg-slate-800/70 hover:bg-slate-800 border border-slate-700/80 transition shrink-0">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+                        </svg>
+                        <span>New</span>
+                    </button>
+                </div>
+
+                <!-- Right: Active Profile Name Input & Delete Button -->
+                <div class="flex items-center gap-2 shrink-0 sm:pl-3 sm:border-l sm:border-slate-800">
+                    <label for="profile-name-input" class="text-[11px] font-medium text-slate-400 shrink-0">Active Name:</label>
+                    <div class="relative flex items-center flex-1 sm:flex-initial">
+                        <svg class="w-3.5 h-3.5 text-slate-500 absolute left-2.5 pointer-events-none" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
+                        </svg>
+                        <input id="profile-name-input" type="text" maxlength="24" placeholder="Profile name" aria-label="Active golfer profile name" class="h-8 bg-slate-950/90 border border-slate-700 focus:border-fairway-500 focus:outline-none rounded-lg pl-8 pr-2.5 text-xs font-medium text-white placeholder-slate-500 w-full sm:w-40 transition">
+                    </div>
+                    <button id="btn-delete-profile" type="button" title="Delete active golfer profile" aria-label="Delete active golfer profile" class="hidden inline-flex items-center justify-center w-8 h-8 rounded-lg bg-slate-950/80 border border-slate-800 text-slate-400 hover:text-rose-400 hover:border-rose-800/60 hover:bg-rose-950/60 transition shrink-0">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Yardage Card Container -->
+        <div class="print-sheet">
+            <main class="print-container bg-slate-900/90 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden backdrop-blur-sm">
+
+                <!-- Card Subheader -->
+                <div class="print-header bg-gradient-to-r from-fairway-900 via-fairway-950 to-slate-900 px-4 sm:px-6 py-3.5 border-b border-slate-800 flex items-center justify-between gap-4">
+                    <div class="print-header-left min-w-0 flex-1">
+                        <div class="flex items-center gap-2 flex-nowrap min-w-0">
+                            <h2 id="card-main-title" class="text-sm sm:text-base font-semibold text-white tracking-wide uppercase truncate">YARDAGE CARD</h2>
+                            <span id="card-profile-badge" class="shrink-0 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-fairway-800/80 text-fairway-200 border border-fairway-600/40 whitespace-nowrap">Matt</span>
+                        </div>
+                        <p class="no-print text-[11px] sm:text-xs text-fairway-300/80 mt-0.5">All distances in yards &bull; Full column displays club-to-club gapping</p>
+                    </div>
+                    <div id="print-conditions-chip" class="print-conditions-chip" aria-hidden="true">
+                        <span id="print-conditions-line1" class="print-conditions-line1">0 ft &bull; 70&deg;F</span>
+                        <span id="print-conditions-line2" class="print-conditions-line2">+0.0% carry</span>
+                    </div>
+                </div>
+
+                <!-- Elevation & Temperature Adjustment Bar (Single Row) -->
+                <div class="no-print bg-slate-900/75 px-3 sm:px-5 py-2.5 border-b border-slate-800/90 flex items-center justify-between gap-2.5 overflow-x-auto">
+                    <!-- Course Dropdown & Edit Trigger -->
+                    <div class="flex items-center gap-2 shrink-0">
+                        <svg class="w-3.5 h-3.5 text-fairway-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 17l6-6 4 4 8-8m0 0h-6m6 0v6"/>
+                        </svg>
+                        <label for="course-preset-select" class="text-xs font-medium text-slate-300 whitespace-nowrap">Course:</label>
+                        <select id="course-preset-select" aria-label="Course elevation preset" class="course-select h-8 min-w-[11.5rem] max-w-[13.5rem] bg-slate-950/90 border border-slate-700 focus:border-fairway-500 focus:outline-none rounded-lg pl-2.5 pr-7 text-xs font-medium text-white cursor-pointer truncate"></select>
+                        <button id="btn-edit-presets" type="button" title="Customize course presets &amp; favorites" aria-label="Customize course presets &amp; favorites" class="h-8 px-2.5 rounded-lg text-xs font-medium bg-slate-800/80 hover:bg-slate-800 text-slate-300 hover:text-fairway-300 border border-slate-700/80 transition shrink-0">
+                            Edit
+                        </button>
+                    </div>
+
+                    <!-- Temperature Slider -->
+                    <div class="flex items-center gap-1.5 shrink-0">
+                        <div class="flex items-center gap-1 text-xs font-medium text-slate-300 shrink-0">
+                            <svg class="w-3.5 h-3.5 text-amber-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M14 14.76V3.5a2.5 2.5 0 00-5 0v11.26a4.5 4.5 0 105 0z"/>
+                            </svg>
+                            <label for="temp-slider" class="whitespace-nowrap">Temp:</label>
+                        </div>
+                        <input id="temp-slider" type="range" min="35" max="105" step="1" value="70" aria-label="Air temperature in Fahrenheit" class="w-20 sm:w-24 shrink-0 accent-amber-400 cursor-pointer bg-slate-800 h-1.5 rounded-lg">
+                        <span id="temp-value-display" class="tabular-nums font-mono text-xs font-semibold text-amber-300 w-10 shrink-0 text-right whitespace-nowrap">70&deg;F</span>
+                        <button id="btn-reset-temp" type="button" title="Reset to standard 70&deg;F" class="invisible px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-slate-200 border border-slate-700 transition shrink-0">
+                            70&deg;
+                        </button>
+                    </div>
+
+                    <!-- Net Carry Adjustment Badge -->
+                    <span id="conditions-boost-badge" class="inline-flex items-center justify-center px-2.5 py-1 rounded-md text-[11px] font-mono font-medium bg-slate-950/60 text-slate-400 border border-slate-800 whitespace-nowrap shrink-0">
+                        +0.0% net carry
+                    </span>
+                </div>
+
+                <!-- Responsive Table Wrapper -->
+                <div class="table-scroll-wrap overflow-x-auto">
+                    <table class="w-full table-fixed text-left border-collapse" id="yardage-table">
+                        <thead>
+                            <tr class="bg-slate-900/95 border-b border-slate-800 text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-slate-400">
+                                <th scope="col" data-col-key="club" class="py-3.5 px-2 sm:px-3 w-[18%] text-center">
+                                    Club
+                                </th>
+                                <th scope="col" data-col-key="tee" class="py-3.5 px-2 sm:px-3 w-[17%] text-center">
+                                    <div class="flex flex-col items-center">
+                                        <span class="text-slate-200">Tee</span>
+                                        <span class="no-print text-[10px] font-normal text-slate-500 normal-case">Pegged / Total</span>
+                                    </div>
+                                </th>
+                                <th scope="col" data-col-key="full" class="py-3.5 px-2 sm:px-3 w-[17%] text-center bg-fairway-950/30 border-x border-slate-800/70">
+                                    <div class="flex flex-col items-center">
+                                        <span class="text-fairway-300">Full</span>
+                                        <span class="no-print text-[10px] font-normal text-fairway-500/80 normal-case">Stock Carry</span>
+                                    </div>
+                                </th>
+                                <th scope="col" data-col-key="gap" class="py-3.5 px-1.5 sm:px-2 w-[13%] text-center">
+                                    <div class="flex flex-col items-center">
+                                        <span class="text-slate-300">Gap</span>
+                                        <span class="no-print text-[10px] font-normal text-slate-500 normal-case">Full &Delta;</span>
+                                    </div>
+                                </th>
+                                <th scope="col" data-col-key="contact" class="py-3.5 px-2 sm:px-3 w-[17%] text-center">
+                                    <div class="flex flex-col items-center">
+                                        <span class="text-slate-200">Contact</span>
+                                        <span class="no-print text-[10px] font-normal text-slate-500 normal-case">3/4 Control</span>
+                                    </div>
+                                </th>
+                                <th scope="col" data-col-key="flighted" class="py-3.5 px-2 sm:px-3 w-[18%] text-center">
+                                    <div class="flex flex-col items-center">
+                                        <span class="text-slate-200">Flighted</span>
+                                        <span class="no-print text-[10px] font-normal text-slate-500 normal-case">Low / Knockdown</span>
+                                    </div>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody id="yardage-tbody" class="divide-y divide-slate-800/70 text-sm"></tbody>
+                    </table>
+                </div>
+
+                <!-- Footer Summary Stats -->
+                <footer class="no-print bg-slate-950/60 px-4 sm:px-6 py-3.5 border-t border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-slate-400">
+                    <div class="flex flex-wrap items-center gap-4">
+                        <span>Clubs Configured: <strong id="stat-configured" class="text-slate-200 font-mono">0 / 12</strong></span>
+                        <span>Avg Iron/Wedge Full Gap: <strong id="stat-avg-gap" class="text-fairway-400 font-mono">&mdash;</strong></span>
+                    </div>
+                    <div class="text-slate-500">
+                        Stored locally in your browser
+                    </div>
+                </footer>
+            </main>
+        </div>
+    </div>
+
+    <!-- Clear Confirmation Modal -->
+    <div id="confirm-modal" class="no-print fixed inset-0 z-50 hidden items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+        <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-sm w-full p-6 shadow-2xl">
+            <h3 class="text-base font-semibold text-white">Reset Active Bag?</h3>
+            <p class="text-xs sm:text-sm text-slate-400 mt-1.5">This will clear all entered yardages for the active golfer profile and reset elevation to 0 ft and temperature to 70&deg;F.</p>
+            <div class="flex items-center justify-end gap-2 mt-6">
+                <button id="modal-cancel" type="button" class="px-4 py-2 rounded-xl text-xs sm:text-sm font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition">
+                    Cancel
+                </button>
+                <button id="modal-confirm" type="button" class="px-4 py-2 rounded-xl text-xs sm:text-sm font-medium bg-rose-600 hover:bg-rose-500 text-white shadow-sm transition">
+                    Reset Bag
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Course Presets Customization Modal -->
+    <div id="presets-modal" class="no-print fixed inset-0 z-50 hidden items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+        <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-md w-full p-6 shadow-2xl">
+            <div class="flex items-center justify-between mb-2">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-9 h-9 rounded-xl bg-fairway-950/90 border border-fairway-700/60 flex items-center justify-center text-fairway-400 shrink-0">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 17l6-6 4 4 8-8m0 0h-6m6 0v6"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="text-base font-semibold text-white">Customize Course Presets</h3>
+                        <p class="text-xs text-slate-400">Star favorites to pin them right below Sea Level.</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-1">
+                    <input type="file" id="courses-csv-input" accept=".csv,text/csv" class="hidden" aria-hidden="true">
+                    <button id="btn-import-courses-csv" type="button" title="Import courses from CSV" class="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg text-[11px] font-medium text-slate-300 hover:text-fairway-300 hover:bg-slate-800 border border-transparent hover:border-slate-700 transition">
+                        <svg class="w-3.5 h-3.5 text-fairway-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+                        </svg>
+                        <span>Import</span>
+                    </button>
+                    <button id="btn-export-courses-csv" type="button" title="Export courses to CSV" class="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg text-[11px] font-medium text-slate-300 hover:text-fairway-300 hover:bg-slate-800 border border-transparent hover:border-slate-700 transition">
+                        <svg class="w-3.5 h-3.5 text-fairway-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                        </svg>
+                        <span>Export</span>
+                    </button>
+                    <button id="presets-modal-close" type="button" aria-label="Close modal" class="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-12 gap-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400 mt-4 mb-1.5 px-1">
+                <span class="col-span-1 text-center" title="Favorite">Fav</span>
+                <span class="col-span-6">Course Name</span>
+                <span class="col-span-4 text-right pr-2">Elevation (ft)</span>
+                <span class="col-span-1"></span>
+            </div>
+
+            <div id="presets-editor-list" class="space-y-2 max-h-64 overflow-y-auto pr-1"></div>
+
+            <div class="mt-3">
+                <button id="btn-add-preset-row" type="button" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 hover:bg-slate-700 text-fairway-300 border border-slate-700 transition">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+                    </svg>
+                    Add Course
+                </button>
+            </div>
+
+            <div class="flex items-center justify-between gap-2.5 mt-6 pt-4 border-t border-slate-800">
+                <button id="btn-reset-presets" type="button" class="px-3 py-2 rounded-xl text-xs font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition">
+                    Reset Defaults
+                </button>
+                <div class="flex items-center gap-2">
+                    <button id="presets-modal-cancel" type="button" class="px-4 py-2 rounded-xl text-xs sm:text-sm font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition">
+                        Cancel
+                    </button>
+                    <button id="presets-modal-save" type="button" class="px-4 py-2 rounded-xl text-xs sm:text-sm font-medium bg-fairway-600 hover:bg-fairway-500 text-white shadow-sm transition">
+                        Save Courses
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification Banner -->
+    <div id="toast" class="no-print fixed bottom-5 right-5 z-50 translate-y-16 opacity-0 pointer-events-none transition-all duration-300 flex items-center gap-2.5 bg-slate-800 border border-slate-700 text-white px-4 py-3 rounded-xl shadow-xl text-sm font-medium">
+        <span class="w-2 h-2 rounded-full bg-fairway-400"></span>
+        <span id="toast-message">Action completed</span>
+    </div>
+
+    <script>
+        /**
+         * Golf Yardage Card & Gapping Matrix Application
+         */
+        (function () {
+            const STORAGE_KEY = 'golf_yardage_matrix_v2';
+            const LEGACY_STORAGE_KEY = 'golf_yardage_matrix_v1';
+
+            const DEFAULT_CLUBS = [
+                { id: 'c0', club: 'Driver', tee: '', full: '', contact: '', flighted: '' },
+                { id: 'c1', club: '3w',     tee: '', full: '', contact: '', flighted: '' },
+                { id: 'c2', club: '4i',     tee: '', full: '', contact: '', flighted: '' },
+                { id: 'c3', club: '5i',     tee: '', full: '', contact: '', flighted: '' },
+                { id: 'c4', club: '6i',     tee: '', full: '', contact: '', flighted: '' },
+                { id: 'c5', club: '7i',     tee: '', full: '', contact: '', flighted: '' },
+                { id: 'c6', club: '8i',     tee: '', full: '', contact: '', flighted: '' },
+                { id: 'c7', club: '9i',     tee: '', full: '', contact: '', flighted: '' },
+                { id: 'c8', club: 'PW',     tee: '', full: '', contact: '', flighted: '' },
+                { id: 'c9', club: '50°',    tee: '', full: '', contact: '', flighted: '' },
+                { id: 'c10', club: '54°',   tee: '', full: '', contact: '', flighted: '' },
+                { id: 'c11', club: '58°',   tee: '', full: '', contact: '', flighted: '' }
+            ];
+
+            const EDITABLE_FIELDS = ['club', 'tee', 'full', 'contact', 'flighted'];
+            const ELEVATION_GAIN_PER_1000FT = 0.0116;
+            const BASE_TEMP_F = 70;
+            const TEMP_GAIN_PER_10F = 0.01;
+
+            const DEFAULT_COURSE_PRESETS = [
+                { name: 'Sea Level', elevation: 0, locked: true, favorite: false },
+                { name: 'Pinehurst', elevation: 550, favorite: false },
+                { name: 'Denver', elevation: 5280, favorite: false },
+                { name: 'Tahoe', elevation: 6250, favorite: false }
+            ];
+
+            const SEA_LEVEL_PRESET = { name: 'Sea Level', elevation: 0, locked: true, favorite: false };
+
+            function isSeaLevelPreset(preset) {
+                return Boolean(preset) && (
+                    preset.locked === true ||
+                    (String(preset.name || '').trim().toLowerCase() === 'sea level' && Number(preset.elevation) === 0)
+                );
+            }
+
+            /**
+             * Normalizes course presets so Sea Level is always first (locked baseline),
+             * followed by favorited courses in their relative order, then non-favorite courses.
+             */
+            function normalizeCoursePresets(presets) {
+                const list = Array.isArray(presets) ? presets : [];
+                const extraCourses = list
+                    .filter((p) => p && !isSeaLevelPreset(p))
+                    .map((p) => ({
+                        name: String(p.name || '').trim(),
+                        elevation: Number(p.elevation) || 0,
+                        favorite: Boolean(p.favorite)
+                    }))
+                    .filter((p) => p.name.length > 0);
+
+                const favorites = extraCourses.filter((p) => p.favorite);
+                const nonFavorites = extraCourses.filter((p) => !p.favorite);
+
+                return [{ ...SEA_LEVEL_PRESET }, ...favorites, ...nonFavorites];
+            }
+
+            let appState = {
+                activeProfile: 0,
+                coursePresets: JSON.parse(JSON.stringify(DEFAULT_COURSE_PRESETS)),
+                profiles: [
+                    { name: 'Matt', elevation: 0, temperature: BASE_TEMP_F, clubs: JSON.parse(JSON.stringify(DEFAULT_CLUBS)) },
+                    { name: 'Jaeric', elevation: 0, temperature: BASE_TEMP_F, clubs: JSON.parse(JSON.stringify(DEFAULT_CLUBS)) }
+                ]
+            };
+            let yardageData = appState.profiles[0].clubs;
+            let saveTimeout = null;
+
+            // DOM References
+            const tbody = document.getElementById('yardage-tbody');
+            const saveDot = document.getElementById('save-dot');
+            const saveText = document.getElementById('save-text');
+            const statConfigured = document.getElementById('stat-configured');
+            const statAvgGap = document.getElementById('stat-avg-gap');
+            const confirmModal = document.getElementById('confirm-modal');
+            const presetsModal = document.getElementById('presets-modal');
+            const presetsEditorList = document.getElementById('presets-editor-list');
+            const coursePresetSelect = document.getElementById('course-preset-select');
+            const toastEl = document.getElementById('toast');
+            const toastMsg = document.getElementById('toast-message');
+            const profileTabsList = document.getElementById('profile-tabs-list');
+            const btnAddProfile = document.getElementById('btn-add-profile');
+            const btnDeleteProfile = document.getElementById('btn-delete-profile');
+            const profileNameInput = document.getElementById('profile-name-input');
+            const cardMainTitle = document.getElementById('card-main-title');
+            const cardProfileBadge = document.getElementById('card-profile-badge');
+            const printConditionsLine1 = document.getElementById('print-conditions-line1');
+            const printConditionsLine2 = document.getElementById('print-conditions-line2');
+            const tempSlider = document.getElementById('temp-slider');
+            const tempValueDisplay = document.getElementById('temp-value-display');
+            const btnResetTemp = document.getElementById('btn-reset-temp');
+            const conditionsBoostBadge = document.getElementById('conditions-boost-badge');
+
+            function getActiveElevation() {
+                const elev = appState.profiles[appState.activeProfile]?.elevation;
+                return typeof elev === 'number' && !isNaN(elev) ? elev : 0;
+            }
+
+            function getActiveTemperature() {
+                const temp = appState.profiles[appState.activeProfile]?.temperature;
+                return typeof temp === 'number' && !isNaN(temp) ? temp : BASE_TEMP_F;
+            }
+
+            function getConditionsMultiplier(elevationFt = getActiveElevation(), tempF = getActiveTemperature()) {
+                const elevDelta = (Number(elevationFt) / 1000) * ELEVATION_GAIN_PER_1000FT;
+                const tempDelta = ((Number(tempF) - BASE_TEMP_F) / 10) * TEMP_GAIN_PER_10F;
+                return 1 + elevDelta + tempDelta;
+            }
+
+            function toDisplayYardage(baseVal, elevationFt = getActiveElevation(), tempF = getActiveTemperature()) {
+                if (baseVal === '' || baseVal === null || baseVal === undefined) return '';
+                const num = parseFloat(baseVal);
+                if (isNaN(num) || num <= 0) return '';
+                return String(Math.round(num * getConditionsMultiplier(elevationFt, tempF)));
+            }
+
+            function toBaseYardage(displayVal, elevationFt = getActiveElevation(), tempF = getActiveTemperature()) {
+                if (displayVal === '' || displayVal === null || displayVal === undefined) return '';
+                const num = parseFloat(displayVal);
+                if (isNaN(num) || num <= 0) return '';
+                const mult = getConditionsMultiplier(elevationFt, tempF);
+                return String(Math.round(num / (mult || 1)));
+            }
+
+            function syncConditionsUI() {
+                const elev = getActiveElevation();
+                const temp = getActiveTemperature();
+                tempSlider.value = temp;
+                tempValueDisplay.textContent = `${temp}°F`;
+
+                if (temp === BASE_TEMP_F) {
+                    btnResetTemp.classList.add('invisible');
+                    tempValueDisplay.className = 'tabular-nums font-mono text-xs font-semibold text-slate-300 w-10 shrink-0 text-right whitespace-nowrap';
+                } else {
+                    btnResetTemp.classList.remove('invisible');
+                    tempValueDisplay.className = temp > BASE_TEMP_F
+                        ? 'tabular-nums font-mono text-xs font-semibold text-amber-300 w-10 shrink-0 text-right whitespace-nowrap'
+                        : 'tabular-nums font-mono text-xs font-semibold text-sky-300 w-10 shrink-0 text-right whitespace-nowrap';
+                }
+
+                const pct = (getConditionsMultiplier(elev, temp) - 1) * 100;
+                const sign = pct >= 0 ? '+' : '';
+                const isStandard = elev === 0 && temp === BASE_TEMP_F;
+
+                const matchedCourse = Array.isArray(appState.coursePresets)
+                    ? appState.coursePresets.find((p) => Number(p.elevation) === elev && p.name && p.name.trim())
+                    : null;
+
+                if (cardMainTitle) {
+                    if (matchedCourse) {
+                        cardMainTitle.textContent = matchedCourse.name.trim();
+                    } else if (elev !== 0) {
+                        cardMainTitle.textContent = `${elev.toLocaleString()} ft`;
+                    } else {
+                        cardMainTitle.textContent = 'YARDAGE CARD';
+                    }
+                }
+
+                if (printConditionsLine1 && printConditionsLine2) {
+                    printConditionsLine1.textContent = `${elev.toLocaleString()} ft • ${temp}°F`;
+                    printConditionsLine2.textContent = `${sign}${pct.toFixed(1)}% carry`;
+                }
+
+                if (isStandard) {
+                    conditionsBoostBadge.textContent = '+0.0% net carry';
+                    conditionsBoostBadge.className = 'inline-flex items-center justify-center px-2.5 py-1 rounded-md text-[11px] font-mono font-medium bg-slate-950/60 text-slate-400 border border-slate-800 whitespace-nowrap shrink-0';
+                } else {
+                    conditionsBoostBadge.textContent = `${sign}${pct.toFixed(1)}% net carry`;
+                    conditionsBoostBadge.className = pct >= 0
+                        ? 'inline-flex items-center justify-center px-2.5 py-1 rounded-md text-[11px] font-mono font-semibold bg-fairway-950/80 text-fairway-300 border border-fairway-700/60 whitespace-nowrap shrink-0'
+                        : 'inline-flex items-center justify-center px-2.5 py-1 rounded-md text-[11px] font-mono font-semibold bg-amber-950/80 text-amber-300 border border-amber-700/60 whitespace-nowrap shrink-0';
+                }
+
+                renderCoursePresets();
+            }
+
+            function syncProfileUI() {
+                if (!Array.isArray(appState.profiles) || appState.profiles.length === 0) {
+                    appState.profiles = [
+                        { name: 'Matt', elevation: 0, temperature: BASE_TEMP_F, clubs: JSON.parse(JSON.stringify(DEFAULT_CLUBS)) }
+                    ];
+                }
+                if (appState.activeProfile < 0 || appState.activeProfile >= appState.profiles.length) {
+                    appState.activeProfile = 0;
+                }
+
+                const idx = appState.activeProfile;
+                if (typeof appState.profiles[idx].elevation !== 'number') {
+                    appState.profiles[idx].elevation = 0;
+                }
+                if (typeof appState.profiles[idx].temperature !== 'number') {
+                    appState.profiles[idx].temperature = BASE_TEMP_F;
+                }
+                yardageData = appState.profiles[idx].clubs;
+
+                profileTabsList.innerHTML = '';
+                appState.profiles.forEach((profile, i) => {
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.setAttribute('role', 'tab');
+                    btn.dataset.profileIdx = i;
+                    const name = profile.name || `Golfer ${i + 1}`;
+                    btn.textContent = name;
+                    const isActive = i === idx;
+                    btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
+                    btn.className = isActive
+                        ? 'h-8 px-3 rounded-lg text-xs font-semibold transition bg-fairway-600 text-white border border-fairway-500/60 shadow-sm whitespace-nowrap'
+                        : 'h-8 px-3 rounded-lg text-xs font-medium transition bg-slate-950/60 text-slate-400 hover:text-slate-200 hover:bg-slate-800 border border-slate-800 whitespace-nowrap';
+
+                    btn.addEventListener('click', () => {
+                        if (appState.activeProfile === i) return;
+                        appState.activeProfile = i;
+                        syncProfileUI();
+                        saveData();
+                        renderTable();
+                        showToast(`Switched to ${appState.profiles[i].name || `Golfer ${i + 1}`}`);
+                    });
+                    profileTabsList.appendChild(btn);
+                });
+
+                const activeName = appState.profiles[idx].name || `Golfer ${idx + 1}`;
+                profileNameInput.value = activeName;
+                cardProfileBadge.textContent = activeName;
+
+                if (appState.profiles.length > 1) {
+                    btnDeleteProfile.classList.remove('hidden');
+                } else {
+                    btnDeleteProfile.classList.add('hidden');
+                }
+
+                syncConditionsUI();
+            }
+
+            let courseSelectBound = false;
+            function renderCoursePresets() {
+                if (!coursePresetSelect) return;
+                const currentElev = getActiveElevation();
+                const presets = normalizeCoursePresets(appState.coursePresets);
+                appState.coursePresets = presets;
+
+                coursePresetSelect.innerHTML = '';
+                let matchedValue = '';
+
+                presets.forEach((preset, idx) => {
+                    const isBaseline = idx === 0 || isSeaLevelPreset(preset);
+                    const elevVal = isBaseline ? 0 : (Number(preset.elevation) || 0);
+                    const starPrefix = (!isBaseline && preset.favorite) ? '★ ' : '';
+                    const option = document.createElement('option');
+                    option.value = String(idx);
+                    option.textContent = `${starPrefix}${preset.name} (${elevVal.toLocaleString()} ft)`;
+                    if (elevVal === currentElev && matchedValue === '') {
+                        matchedValue = String(idx);
+                    }
+                    coursePresetSelect.appendChild(option);
+                });
+
+                if (matchedValue !== '') {
+                    coursePresetSelect.value = matchedValue;
+                } else {
+                    const customOpt = document.createElement('option');
+                    customOpt.value = 'custom';
+                    customOpt.textContent = `Custom (${currentElev.toLocaleString()} ft)`;
+                    customOpt.selected = true;
+                    coursePresetSelect.appendChild(customOpt);
+                    coursePresetSelect.value = 'custom';
+                }
+
+                if (!courseSelectBound) {
+                    coursePresetSelect.addEventListener('change', (e) => {
+                        const val = e.target.value;
+                        if (val === 'custom') return;
+                        const idx = parseInt(val, 10);
+                        const chosen = appState.coursePresets[idx];
+                        if (!chosen) return;
+                        const isBaseline = idx === 0 || isSeaLevelPreset(chosen);
+                        const elevVal = isBaseline ? 0 : (Number(chosen.elevation) || 0);
+                        appState.profiles[appState.activeProfile].elevation = elevVal;
+                        syncConditionsUI();
+                        saveData();
+                        renderTable();
+                        showToast(`Applied ${chosen.name} (${elevVal.toLocaleString()} ft)`);
+                    });
+                    courseSelectBound = true;
+                }
+            }
+
+            function loadData() {
+                try {
+                    const rawV2 = localStorage.getItem(STORAGE_KEY);
+                    if (rawV2) {
+                        const parsed = JSON.parse(rawV2);
+                        if (parsed && Array.isArray(parsed.profiles) && parsed.profiles.length > 0) {
+                            appState = {
+                                activeProfile: typeof parsed.activeProfile === 'number' ? parsed.activeProfile : 0,
+                                coursePresets: normalizeCoursePresets(
+                                    Array.isArray(parsed.coursePresets) && parsed.coursePresets.length > 0
+                                        ? parsed.coursePresets
+                                        : DEFAULT_COURSE_PRESETS
+                                ),
+                                profiles: parsed.profiles.map((p, idx) => ({
+                                    name: p.name || `Golfer ${idx + 1}`,
+                                    elevation: typeof p.elevation === 'number' ? p.elevation : 0,
+                                    temperature: typeof p.temperature === 'number' ? p.temperature : BASE_TEMP_F,
+                                    clubs: Array.isArray(p.clubs) && p.clubs.length > 0
+                                        ? p.clubs.map((c, cIdx) => ({
+                                            id: c.id || `c_${Date.now()}_${cIdx}`,
+                                            club: c.club ?? '',
+                                            tee: c.tee ?? '',
+                                            full: c.full ?? '',
+                                            contact: c.contact ?? '',
+                                            flighted: c.flighted ?? ''
+                                        }))
+                                        : JSON.parse(JSON.stringify(DEFAULT_CLUBS))
+                                }))
+                            };
+                            return;
+                        }
+                    }
+
+                    const rawV1 = localStorage.getItem(LEGACY_STORAGE_KEY);
+                    if (rawV1) {
+                        const parsedV1 = JSON.parse(rawV1);
+                        if (Array.isArray(parsedV1) && parsedV1.length > 0) {
+                            appState.profiles[0].clubs = parsedV1.map((c, cIdx) => ({
+                                id: c.id || `c_${cIdx}`,
+                                club: c.club ?? '',
+                                tee: c.tee ?? '',
+                                full: c.full ?? '',
+                                contact: c.contact ?? '',
+                                flighted: c.flighted ?? ''
+                            }));
+                        }
+                    }
+                } catch (err) {
+                    console.error('Failed to load saved yardage data:', err);
+                }
+            }
+
+            function saveData() {
+                if (saveDot && saveText) {
+                    saveDot.className = 'w-1.5 h-1.5 rounded-full bg-amber-400';
+                    saveText.textContent = 'Saving...';
+                }
+
+                clearTimeout(saveTimeout);
+                saveTimeout = setTimeout(() => {
+                    try {
+                        localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
+                        if (saveDot && saveText) {
+                            saveDot.className = 'w-1.5 h-1.5 rounded-full bg-emerald-400';
+                            saveText.textContent = 'Saved';
+                        }
+                    } catch (err) {
+                        console.error('Failed to save yardage data:', err);
+                        if (saveDot && saveText) {
+                            saveDot.className = 'w-1.5 h-1.5 rounded-full bg-rose-400';
+                            saveText.textContent = 'Save Error';
+                        }
+                    }
+                }, 150);
+            }
+
+            let toastTimer = null;
+            function showToast(message) {
+                if (!toastEl || !toastMsg) return;
+                toastMsg.textContent = message;
+                toastEl.classList.remove('translate-y-16', 'opacity-0');
+                toastEl.classList.add('translate-y-0', 'opacity-100');
+                clearTimeout(toastTimer);
+                toastTimer = setTimeout(() => {
+                    toastEl.classList.add('translate-y-16', 'opacity-0');
+                    toastEl.classList.remove('translate-y-0', 'opacity-100');
+                }, 2600);
+            }
+
+            function focusCell(rowIdx, field) {
+                if (rowIdx < 0 || rowIdx >= yardageData.length) return;
+                const input = tbody.querySelector(`input[data-row="${rowIdx}"][data-field="${field}"]`);
+                if (input) {
+                    input.focus();
+                    input.select();
+                }
+            }
+
+            function updateGapsAndStats() {
+                const elev = getActiveElevation();
+                const temp = getActiveTemperature();
+                let configuredCount = 0;
+                const ironWedgeGaps = [];
+
+                yardageData.forEach((row, idx) => {
+                    const hasAnyValue = ['tee', 'full', 'contact', 'flighted'].some(
+                        (k) => row[k] !== '' && row[k] !== null && row[k] !== undefined
+                    );
+                    if (hasAnyValue) configuredCount++;
+
+                    const gapCell = tbody.querySelector(`[data-gap-row="${idx}"]`);
+                    if (!gapCell) return;
+
+                    const currDisp = parseInt(toDisplayYardage(row.full, elev, temp), 10);
+                    const nextRow = yardageData[idx + 1];
+                    const nextDisp = nextRow ? parseInt(toDisplayYardage(nextRow.full, elev, temp), 10) : NaN;
+
+                    if (!isNaN(currDisp) && !isNaN(nextDisp)) {
+                        const diff = currDisp - nextDisp;
+                        let badgeClass = 'gap-badge inline-flex items-center justify-center px-2 py-0.5 rounded-md text-xs font-mono font-semibold border ';
+
+                        if (diff >= 10 && diff <= 16) {
+                            badgeClass += 'bg-fairway-950/80 text-fairway-300 border-fairway-700/60';
+                        } else if (diff > 16 || (diff > 0 && diff < 10)) {
+                            badgeClass += 'bg-amber-950/70 text-amber-300 border-amber-700/60';
+                        } else {
+                            badgeClass += 'bg-rose-950/70 text-rose-300 border-rose-700/60';
+                        }
+
+                        gapCell.innerHTML = `<span class="${badgeClass}">${diff}y</span>`;
+
+                        const clubLower = (row.club || '').toLowerCase();
+                        const isWoodOrDriver = clubLower.includes('driv') || clubLower.endsWith('w') || clubLower.includes('wood');
+                        if (!isWoodOrDriver && diff > 0) {
+                            ironWedgeGaps.push(diff);
+                        }
+                    } else {
+                        gapCell.innerHTML = '<span class="text-slate-600 font-mono text-xs">—</span>';
+                    }
+                });
+
+                if (statConfigured) {
+                    statConfigured.textContent = `${configuredCount} / ${yardageData.length}`;
+                }
+                if (statAvgGap) {
+                    if (ironWedgeGaps.length > 0) {
+                        const avg = ironWedgeGaps.reduce((a, b) => a + b, 0) / ironWedgeGaps.length;
+                        statAvgGap.textContent = `${avg.toFixed(1)} yds`;
+                    } else {
+                        statAvgGap.textContent = '—';
+                    }
+                }
+            }
+
+            function getActiveColumnUsage() {
+                const hasTee = yardageData.some((r) => String(r.tee ?? '').trim() !== '');
+                const hasFull = yardageData.some((r) => String(r.full ?? '').trim() !== '');
+                const hasContact = yardageData.some((r) => String(r.contact ?? '').trim() !== '');
+                const hasFlighted = yardageData.some((r) => String(r.flighted ?? '').trim() !== '');
+
+                return {
+                    club: true,
+                    tee: hasTee,
+                    full: hasFull,
+                    gap: hasFull,
+                    contact: hasContact,
+                    flighted: hasFlighted
+                };
+            }
+
+            function syncPrintColumnVisibility() {
+                const tableEl = document.getElementById('yardage-table');
+                if (!tableEl) return;
+
+                const usage = getActiveColumnUsage();
+                const anyYardageEntered = usage.tee || usage.full || usage.contact || usage.flighted;
+
+                tableEl.querySelectorAll('[data-col-key="gap"]').forEach((el) => {
+                    el.classList.add('print-hide-col');
+                });
+
+                ['tee', 'full', 'contact', 'flighted'].forEach((colKey) => {
+                    const shouldShow = anyYardageEntered ? usage[colKey] : (colKey === 'full');
+                    tableEl.querySelectorAll(`[data-col-key="${colKey}"]`).forEach((el) => {
+                        el.classList.toggle('print-hide-col', !shouldShow);
+                    });
+                });
+            }
+
+            function renderTable() {
+                tbody.innerHTML = '';
+                const elev = getActiveElevation();
+                const temp = getActiveTemperature();
+
+                yardageData.forEach((row, rowIdx) => {
+                    const tr = document.createElement('tr');
+                    tr.className = 'group hover:bg-slate-800/45 transition-colors';
+
+                    const tdClub = document.createElement('td');
+                    tdClub.className = 'py-2 px-2 sm:px-3 text-center';
+                    const clubWrap = document.createElement('div');
+                    clubWrap.className = 'relative flex items-center justify-center';
+                    const clubInput = document.createElement('input');
+                    clubInput.type = 'text';
+                    clubInput.value = row.club || '';
+                    clubInput.placeholder = 'Club';
+                    clubInput.dataset.row = rowIdx;
+                    clubInput.dataset.field = 'club';
+                    clubInput.setAttribute('aria-label', `Club name row ${rowIdx + 1}`);
+                    clubInput.className = 'cell-input w-full text-center bg-transparent hover:bg-slate-800/80 focus:bg-slate-950 border border-transparent focus:border-fairway-500 rounded-lg px-2 py-1.5 text-sm font-semibold text-white placeholder-slate-600 focus:outline-none';
+                    clubWrap.appendChild(clubInput);
+                    tdClub.appendChild(clubWrap);
+                    tr.appendChild(tdClub);
+
+                    const columns = [
+                        { key: 'tee', isFull: false },
+                        { key: 'full', isFull: true },
+                        { key: 'gap', isGap: true },
+                        { key: 'contact', isFull: false },
+                        { key: 'flighted', isFull: false }
+                    ];
+
+                    columns.forEach((col, cIdx) => {
+                        const td = document.createElement('td');
+                        td.dataset.colKey = col.key;
+                        if (col.isGap) {
+                            td.className = 'py-2 px-1.5 sm:px-2 text-center';
+                            td.dataset.gapRow = rowIdx;
+                            td.innerHTML = '<span class="text-slate-600 font-mono text-xs">—</span>';
+                            tr.appendChild(td);
+                            return;
+                        }
+
+                        td.className = col.isFull
+                            ? 'py-2 px-2 sm:px-3 text-center bg-fairway-950/25 border-x border-slate-800/70'
+                            : 'py-2 px-2 sm:px-3 text-center';
+
+                        const isLastCol = cIdx === columns.length - 1;
+                        const cellBox = document.createElement('div');
+                        cellBox.className = isLastCol ? 'relative flex items-center justify-center' : 'flex items-center justify-center';
+
+                        const input = document.createElement('input');
+                        input.type = 'number';
+                        input.inputMode = 'numeric';
+                        input.min = '0';
+                        input.max = '450';
+                        input.placeholder = '—';
+                        input.value = toDisplayYardage(row[col.key], elev, temp);
+                        input.dataset.row = rowIdx;
+                        input.dataset.field = col.key;
+                        input.setAttribute('aria-label', `${row.club || 'Club'} ${col.key} yardage`);
+                        input.className = col.isFull
+                            ? 'cell-input tabular-nums font-mono w-full max-w-[5.25rem] text-center bg-transparent hover:bg-fairway-900/40 focus:bg-slate-950 border border-transparent focus:border-fairway-400 rounded-lg py-1.5 text-sm font-bold text-fairway-200 placeholder-slate-600 focus:outline-none'
+                            : 'cell-input tabular-nums font-mono w-full max-w-[5.25rem] text-center bg-transparent hover:bg-slate-800/80 focus:bg-slate-950 border border-transparent focus:border-fairway-500 rounded-lg py-1.5 text-sm font-medium text-slate-200 placeholder-slate-600 focus:outline-none';
+
+                        cellBox.appendChild(input);
+
+                        if (isLastCol) {
+                            const actionsDiv = document.createElement('div');
+                            actionsDiv.className = 'no-print absolute -right-1 sm:right-0 inline-flex flex-col gap-0.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-within:opacity-100 transition-opacity';
+                            actionsDiv.innerHTML = `
+                                <button type="button" data-action="insert" data-row="${rowIdx}" title="Insert club below" aria-label="Insert club below ${row.club || 'row'}" class="w-4 h-4 rounded inline-flex items-center justify-center text-slate-400 hover:text-fairway-300 hover:bg-slate-800 transition">
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+                                    </svg>
+                                </button>
+                                <button type="button" data-action="delete" data-row="${rowIdx}" title="Remove club" aria-label="Remove ${row.club || 'row'}" class="w-4 h-4 rounded inline-flex items-center justify-center text-slate-500 hover:text-rose-400 hover:bg-rose-950/60 transition">
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                                    </svg>
+                                </button>
+                            `;
+                            cellBox.appendChild(actionsDiv);
+                        }
+
+                        td.appendChild(cellBox);
+                        tr.appendChild(td);
+                    });
+                    tbody.appendChild(tr);
+                });
+
+                updateGapsAndStats();
+                syncPrintColumnVisibility();
+            }
+
+            tbody.addEventListener('input', (e) => {
+                const target = e.target;
+                if (!target.matches('input[data-row][data-field]')) return;
+
+                const rowIdx = parseInt(target.dataset.row, 10);
+                const field = target.dataset.field;
+                if (!yardageData[rowIdx]) return;
+
+                if (field === 'club') {
+                    yardageData[rowIdx].club = target.value;
+                } else {
+                    yardageData[rowIdx][field] = toBaseYardage(target.value);
+                }
+
+                updateGapsAndStats();
+                syncPrintColumnVisibility();
+                saveData();
+            });
+
+            tbody.addEventListener('keydown', (e) => {
+                const target = e.target;
+                if (!target.matches('input[data-row][data-field]')) return;
+
+                const rowIdx = parseInt(target.dataset.row, 10);
+                const field = target.dataset.field;
+                const colIdx = EDITABLE_FIELDS.indexOf(field);
+
+                if (e.key === 'Enter' || e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    focusCell(rowIdx + 1, field);
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    focusCell(rowIdx - 1, field);
+                } else if (e.key === 'ArrowRight' && field !== 'club') {
+                    e.preventDefault();
+                    if (colIdx < EDITABLE_FIELDS.length - 1) {
+                        focusCell(rowIdx, EDITABLE_FIELDS[colIdx + 1]);
+                    }
+                } else if (e.key === 'ArrowLeft' && field !== 'club') {
+                    e.preventDefault();
+                    if (colIdx > 0) {
+                        focusCell(rowIdx, EDITABLE_FIELDS[colIdx - 1]);
+                    }
+                }
+            });
+
+            tbody.addEventListener('click', (e) => {
+                const btn = e.target.closest('button[data-action]');
+                if (!btn) return;
+
+                const action = btn.dataset.action;
+                const rowIdx = parseInt(btn.dataset.row, 10);
+
+                if (action === 'insert') {
+                    yardageData.splice(rowIdx + 1, 0, {
+                        id: `c_${Date.now()}`,
+                        club: '',
+                        tee: '',
+                        full: '',
+                        contact: '',
+                        flighted: ''
+                    });
+                    saveData();
+                    renderTable();
+                    focusCell(rowIdx + 1, 'club');
+                    showToast('Inserted new club row');
+                } else if (action === 'delete') {
+                    if (yardageData.length <= 1) {
+                        showToast('At least one club row must remain');
+                        return;
+                    }
+                    const removedName = yardageData[rowIdx]?.club || 'club';
+                    yardageData.splice(rowIdx, 1);
+                    saveData();
+                    renderTable();
+                    showToast(`Removed ${removedName}`);
+                }
+            });
+
+            profileNameInput.addEventListener('input', (e) => {
+                const val = e.target.value;
+                const idx = appState.activeProfile;
+                appState.profiles[idx].name = val;
+                const displayName = val.trim() || `Golfer ${idx + 1}`;
+                cardProfileBadge.textContent = displayName;
+                const activeTab = profileTabsList.querySelector(`button[data-profile-idx="${idx}"]`);
+                if (activeTab) activeTab.textContent = displayName;
+                saveData();
+            });
+
+            btnAddProfile.addEventListener('click', () => {
+                const nextNum = appState.profiles.length + 1;
+                appState.profiles.push({
+                    name: `Golfer ${nextNum}`,
+                    elevation: 0,
+                    temperature: BASE_TEMP_F,
+                    clubs: JSON.parse(JSON.stringify(DEFAULT_CLUBS))
+                });
+                appState.activeProfile = appState.profiles.length - 1;
+                syncProfileUI();
+                saveData();
+                renderTable();
+                profileNameInput.focus();
+                profileNameInput.select();
+                showToast(`Created Golfer ${nextNum} profile`);
+            });
+
+            btnDeleteProfile.addEventListener('click', () => {
+                if (appState.profiles.length <= 1) return;
+                const idx = appState.activeProfile;
+                const removedName = appState.profiles[idx].name || `Golfer ${idx + 1}`;
+                appState.profiles.splice(idx, 1);
+                appState.activeProfile = Math.max(0, idx - 1);
+                syncProfileUI();
+                saveData();
+                renderTable();
+                showToast(`Deleted ${removedName}`);
+            });
+
+            tempSlider.addEventListener('input', (e) => {
+                const parsed = parseInt(e.target.value, 10);
+                const val = isNaN(parsed) ? BASE_TEMP_F : parsed;
+
+                appState.profiles[appState.activeProfile].temperature = val;
+                syncConditionsUI();
+                saveData();
+                renderTable();
+            });
+
+            btnResetTemp.addEventListener('click', () => {
+                appState.profiles[appState.activeProfile].temperature = BASE_TEMP_F;
+                syncConditionsUI();
+                saveData();
+                renderTable();
+                showToast('Temperature reset to 70°F');
+            });
+
+            let draftPresets = [];
+            function collectDraftPresetsFromDOM() {
+                const nameInputs = presetsEditorList.querySelectorAll('input[data-preset-name]');
+                const elevInputs = presetsEditorList.querySelectorAll('input[data-preset-elev]');
+                const favButtons = presetsEditorList.querySelectorAll('button[data-toggle-fav]');
+                const list = [{ ...SEA_LEVEL_PRESET }];
+                nameInputs.forEach((nInput, i) => {
+                    const isFav = favButtons[i]?.dataset.fav === 'true';
+                    list.push({
+                        name: nInput.value,
+                        elevation: parseInt(elevInputs[i]?.value, 10) || 0,
+                        favorite: Boolean(isFav)
+                    });
+                });
+                return list;
+            }
+
+            function renderPresetsEditorList(presetsToEdit) {
+                const normalized = normalizeCoursePresets(presetsToEdit);
+                presetsEditorList.innerHTML = '';
+                normalized.forEach((preset, idx) => {
+                    const isLockedRow = idx === 0 || isSeaLevelPreset(preset);
+                    const row = document.createElement('div');
+                    row.className = 'grid grid-cols-12 gap-2 items-center';
+                    if (isLockedRow) {
+                        row.innerHTML = `
+                            <div class="col-span-1 h-7 rounded-lg inline-flex items-center justify-center text-slate-600" title="Baseline course">
+                                <span class="w-1.5 h-1.5 rounded-full bg-fairway-500/70"></span>
+                            </div>
+                            <div class="col-span-6 flex items-center justify-between bg-fairway-950/50 border border-fairway-800/70 rounded-lg px-2.5 py-1.5 text-xs text-fairway-200">
+                                <span class="font-semibold">Sea Level</span>
+                                <span class="text-[10px] uppercase tracking-wider font-mono text-fairway-400">Baseline</span>
+                            </div>
+                            <div class="col-span-4 tabular-nums font-mono text-right bg-slate-950/70 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-400 select-none">
+                                0
+                            </div>
+                            <div class="col-span-1 h-7 rounded-lg inline-flex items-center justify-center text-slate-600" title="Sea Level baseline cannot be removed">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                                </svg>
+                            </div>
+                        `;
+                    } else {
+                        const isFav = Boolean(preset.favorite);
+                        row.innerHTML = `
+                            <button type="button" data-toggle-fav="${idx}" data-fav="${isFav ? 'true' : 'false'}" title="${isFav ? 'Unfavorite course' : 'Favorite course (pins under Sea Level)'}" aria-label="${isFav ? 'Unfavorite' : 'Favorite'} ${preset.name || 'course'}" class="col-span-1 h-7 rounded-lg inline-flex items-center justify-center transition ${isFav ? 'text-amber-400 bg-amber-950/50 border border-amber-700/50 hover:bg-amber-950/80' : 'text-slate-500 hover:text-amber-300 hover:bg-slate-800'}">
+                                <svg class="w-3.5 h-3.5" fill="${isFav ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>
+                                </svg>
+                            </button>
+                            <input type="text" data-preset-name="${idx}" value="${(preset.name || '').replace(/"/g, '&quot;')}" placeholder="Course name" class="col-span-6 bg-slate-950 border border-slate-700 focus:border-fairway-500 focus:outline-none rounded-lg px-2.5 py-1.5 text-xs text-white">
+                            <input type="number" step="50" data-preset-elev="${idx}" value="${Number(preset.elevation) || 0}" placeholder="0" class="col-span-4 tabular-nums font-mono text-right bg-slate-950 border border-slate-700 focus:border-fairway-500 focus:outline-none rounded-lg px-2.5 py-1.5 text-xs text-white">
+                            <button type="button" data-remove-preset="${idx}" aria-label="Remove preset" class="col-span-1 h-7 rounded-lg inline-flex items-center justify-center text-slate-400 hover:text-rose-400 hover:bg-rose-950/60 transition">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                                </svg>
+                            </button>
+                        `;
+                    }
+                    presetsEditorList.appendChild(row);
+                });
+            }
+
+            document.getElementById('btn-edit-presets')?.addEventListener('click', () => {
+                draftPresets = normalizeCoursePresets(appState.coursePresets || DEFAULT_COURSE_PRESETS);
+                renderPresetsEditorList(draftPresets);
+                presetsModal.classList.remove('hidden');
+                presetsModal.classList.add('flex');
+            });
+
+            document.getElementById('btn-add-preset-row').addEventListener('click', () => {
+                draftPresets = collectDraftPresetsFromDOM();
+                if (draftPresets.length >= 8) {
+                    showToast('Maximum of 8 course presets');
+                    return;
+                }
+                draftPresets.push({ name: '', elevation: 0, favorite: false });
+                renderPresetsEditorList(draftPresets);
+            });
+
+            presetsEditorList.addEventListener('click', (e) => {
+                const favBtn = e.target.closest('button[data-toggle-fav]');
+                if (favBtn) {
+                    draftPresets = collectDraftPresetsFromDOM();
+                    const idx = parseInt(favBtn.dataset.toggleFav, 10);
+                    if (idx > 0 && draftPresets[idx]) {
+                        draftPresets[idx].favorite = !draftPresets[idx].favorite;
+                        draftPresets = normalizeCoursePresets(draftPresets);
+                        renderPresetsEditorList(draftPresets);
+                    }
+                    return;
+                }
+
+                const btn = e.target.closest('button[data-remove-preset]');
+                if (!btn) return;
+                draftPresets = collectDraftPresetsFromDOM();
+                const idx = parseInt(btn.dataset.removePreset, 10);
+                if (idx <= 0) return;
+                draftPresets.splice(idx, 1);
+                renderPresetsEditorList(draftPresets);
+            });
+
+            document.getElementById('btn-reset-presets').addEventListener('click', () => {
+                draftPresets = normalizeCoursePresets(DEFAULT_COURSE_PRESETS);
+                renderPresetsEditorList(draftPresets);
+            });
+
+            document.getElementById('btn-export-courses-csv').addEventListener('click', () => {
+                const currentDraft = collectDraftPresetsFromDOM()
+                    .map((p) => ({
+                        name: (p.name || '').trim(),
+                        elevation: Number(p.elevation) || 0,
+                        favorite: Boolean(p.favorite)
+                    }))
+                    .filter((p) => p.name.length > 0);
+
+                const listToExport = currentDraft.length > 0 ? currentDraft : (appState.coursePresets || []);
+                if (listToExport.length === 0) {
+                    showToast('No courses to export');
+                    return;
+                }
+
+                const lines = ['Course Name,Elevation (ft),Favorite'];
+                listToExport.forEach((p) => {
+                    const safeName = String(p.name).includes(',') || String(p.name).includes('"')
+                        ? `"${String(p.name).replace(/"/g, '""')}"`
+                        : String(p.name);
+                    lines.push(`${safeName},${Number(p.elevation) || 0},${p.favorite ? 'true' : 'false'}`);
+                });
+
+                const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.setAttribute('download', 'course-elevations.csv');
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+                showToast(`Exported ${listToExport.length} courses to CSV`);
+            });
+
+            const coursesCsvInput = document.getElementById('courses-csv-input');
+            document.getElementById('btn-import-courses-csv').addEventListener('click', () => {
+                coursesCsvInput.value = '';
+                coursesCsvInput.click();
+            });
+
+            coursesCsvInput.addEventListener('change', (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = (evt) => {
+                    try {
+                        const text = String(evt.target?.result || '');
+                        const lines = text.split(/\r?\n/).filter((l) => l.trim().length > 0);
+                        if (lines.length === 0) {
+                            showToast('Courses CSV file is empty');
+                            return;
+                        }
+
+                        const firstCols = parseCSVLine(lines[0]).map((c) => c.toLowerCase());
+                        const hasHeader = firstCols.some((c) => c.includes('course') || c.includes('name') || c.includes('elev'));
+                        const startIdx = hasHeader ? 1 : 0;
+
+                        const imported = [];
+                        for (let i = startIdx; i < lines.length; i++) {
+                            const cols = parseCSVLine(lines[i]);
+                            const rawName = (cols[0] || '').trim();
+                            if (!rawName) continue;
+                            const rawElev = cols[1] !== undefined ? cols[1].replace(/[^0-9.-]/g, '') : '0';
+                            const parsedElev = parseInt(rawElev, 10);
+                            const rawFav = (cols[2] || '').trim().toLowerCase();
+                            const isFav = rawFav === 'true' || rawFav === '1' || rawFav === 'yes' || rawFav === 'fav' || rawFav === '★';
+                            imported.push({
+                                name: rawName,
+                                elevation: isNaN(parsedElev) ? 0 : Math.max(-500, Math.min(15000, parsedElev)),
+                                favorite: isFav
+                            });
+                        }
+
+                        if (imported.length === 0) {
+                            showToast('No valid courses found in CSV');
+                            return;
+                        }
+
+                        draftPresets = normalizeCoursePresets(imported);
+                        renderPresetsEditorList(draftPresets);
+                        showToast(`Loaded ${imported.length} courses — click Save Courses to apply`);
+                    } catch (err) {
+                        console.error('Courses CSV import error:', err);
+                        showToast('Failed to parse courses CSV');
+                    }
+                };
+                reader.readAsText(file);
+            });
+
+            function closePresetsModal() {
+                presetsModal.classList.add('hidden');
+                presetsModal.classList.remove('flex');
+            }
+
+            document.getElementById('presets-modal-close').addEventListener('click', closePresetsModal);
+            document.getElementById('presets-modal-cancel').addEventListener('click', closePresetsModal);
+
+            document.getElementById('presets-modal-save').addEventListener('click', () => {
+                const updated = normalizeCoursePresets(collectDraftPresetsFromDOM());
+                appState.coursePresets = updated;
+                syncConditionsUI();
+                saveData();
+                closePresetsModal();
+                showToast('Saved course presets');
+            });
+
+            document.getElementById('btn-export').addEventListener('click', () => {
+                const elev = getActiveElevation();
+                const temp = getActiveTemperature();
+                const usage = getActiveColumnUsage();
+                const anyYardageEntered = usage.tee || usage.full || usage.contact || usage.flighted;
+
+                const activeCols = [
+                    { key: 'club', label: 'Club', include: true },
+                    { key: 'tee', label: 'Tee', include: !anyYardageEntered || usage.tee },
+                    { key: 'full', label: 'Full', include: !anyYardageEntered || usage.full },
+                    { key: 'gap', label: 'Gap', include: !anyYardageEntered || usage.gap },
+                    { key: 'contact', label: 'Contact', include: !anyYardageEntered || usage.contact },
+                    { key: 'flighted', label: 'Flighted', include: !anyYardageEntered || usage.flighted }
+                ].filter((c) => c.include);
+
+                const headers = activeCols.map((c) => c.label);
+
+                const rows = yardageData.map((row, idx) => {
+                    const teeDisp = toDisplayYardage(row.tee, elev, temp);
+                    const fullDisp = toDisplayYardage(row.full, elev, temp);
+                    const contactDisp = toDisplayYardage(row.contact, elev, temp);
+                    const flightedDisp = toDisplayYardage(row.flighted, elev, temp);
+
+                    let gapVal = '';
+                    const nextRow = yardageData[idx + 1];
+                    const currNum = parseInt(fullDisp, 10);
+                    const nextNum = nextRow ? parseInt(toDisplayYardage(nextRow.full, elev, temp), 10) : NaN;
+                    if (!isNaN(currNum) && !isNaN(nextNum)) {
+                        gapVal = String(currNum - nextNum);
+                    }
+
+                    const valueMap = {
+                        club: row.club || '',
+                        tee: teeDisp,
+                        full: fullDisp,
+                        gap: gapVal,
+                        contact: contactDisp,
+                        flighted: flightedDisp
+                    };
+
+                    return activeCols.map((col) => {
+                        let str = String(valueMap[col.key] ?? '');
+                        if (col.key === 'club' && !anyYardageEntered && str) {
+                            str = `  ${str}  `;
+                        }
+                        return str.includes(',') || str.includes('"') ? `"${str.replace(/"/g, '""')}"` : str;
+                    }).join(',');
+                });
+
+                const csvContent = [headers.join(','), ...rows].join('\n');
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+
+                const activeProfileName = (appState.profiles[appState.activeProfile]?.name || `Golfer ${appState.activeProfile + 1}`)
+                    .trim()
+                    .toLowerCase()
+                    .replace(/[^a-z0-9]+/g, '-')
+                    .replace(/^-|-$/g, '') || 'golfer';
+
+                const matchedCourse = Array.isArray(appState.coursePresets)
+                    ? appState.coursePresets.find((p) => Number(p.elevation) === elev && p.name && p.name.trim())
+                    : null;
+
+                const locationTag = matchedCourse
+                    ? matchedCourse.name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+                    : `${elev}ft`;
+
+                const tempTag = `${temp}f`;
+                const link = document.createElement('a');
+                link.href = url;
+                link.setAttribute('download', `yardages-${activeProfileName}-${locationTag}-${tempTag}.csv`);
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+                showToast('Exported yardage card to CSV');
+            });
+
+            const csvFileInput = document.getElementById('csv-file-input');
+            document.getElementById('btn-import').addEventListener('click', () => {
+                csvFileInput.value = '';
+                csvFileInput.click();
+            });
+
+            function parseCSVLine(line) {
+                const result = [];
+                let current = '';
+                let inQuotes = false;
+                for (let i = 0; i < line.length; i++) {
+                    const ch = line[i];
+                    if (ch === '"') {
+                        if (inQuotes && line[i + 1] === '"') {
+                            current += '"';
+                            i++;
+                        } else {
+                            inQuotes = !inQuotes;
+                        }
+                    } else if (ch === ',' && !inQuotes) {
+                        result.push(current.trim());
+                        current = '';
+                    } else {
+                        current += ch;
+                    }
+                }
+                result.push(current.trim());
+                return result;
+            }
+
+            csvFileInput.addEventListener('change', (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = (evt) => {
+                    try {
+                        const text = String(evt.target?.result || '');
+                        const lines = text.split(/\r?\n/).filter((l) => l.trim().length > 0);
+                        if (lines.length < 2) {
+                            showToast('CSV file appears empty');
+                            return;
+                        }
+
+                        const headerCols = parseCSVLine(lines[0]).map((h) => h.toLowerCase());
+                        const idxClub = headerCols.findIndex((h) => h.includes('club'));
+                        const idxTee = headerCols.findIndex((h) => h.includes('tee'));
+                        const idxFull = headerCols.findIndex((h) => h.includes('full'));
+                        const idxContact = headerCols.findIndex((h) => h.includes('contact'));
+                        const idxFlighted = headerCols.findIndex((h) => h.includes('flight'));
+
+                        const sanitizeNum = (val) => {
+                            if (!val || val === '—' || val === '-') return '';
+                            const cleaned = val.replace(/[^0-9.]/g, '');
+                            return cleaned ? toBaseYardage(cleaned) : '';
+                        };
+
+                        const importedClubs = [];
+                        for (let i = 1; i < lines.length; i++) {
+                            const cols = parseCSVLine(lines[i]);
+                            const clubVal = idxClub >= 0 ? (cols[idxClub] || '') : (cols[0] || '');
+                            const teeVal = idxTee >= 0 ? cols[idxTee] : cols[1];
+                            const fullVal = idxFull >= 0 ? cols[idxFull] : cols[2];
+                            const contactVal = idxContact >= 0 ? cols[idxContact] : cols[3];
+                            const flightedVal = idxFlighted >= 0 ? cols[idxFlighted] : cols[4];
+
+                            if (!clubVal && !teeVal && !fullVal && !contactVal && !flightedVal) continue;
+
+                            importedClubs.push({
+                                id: `imp_${Date.now()}_${i}`,
+                                club: clubVal,
+                                tee: sanitizeNum(teeVal),
+                                full: sanitizeNum(fullVal),
+                                contact: sanitizeNum(contactVal),
+                                flighted: sanitizeNum(flightedVal)
+                            });
+                        }
+
+                        if (importedClubs.length === 0) {
+                            showToast('No valid club rows found in CSV');
+                            return;
+                        }
+
+                        appState.profiles[appState.activeProfile].clubs = importedClubs;
+                        yardageData = appState.profiles[appState.activeProfile].clubs;
+                        saveData();
+                        renderTable();
+                        showToast(`Imported ${importedClubs.length} clubs from CSV`);
+                    } catch (err) {
+                        console.error('CSV import error:', err);
+                        showToast('Failed to parse CSV file');
+                    }
+                };
+                reader.readAsText(file);
+            });
+
+            document.getElementById('btn-print').addEventListener('click', () => {
+                syncConditionsUI();
+                window.print();
+            });
+
+            document.getElementById('btn-clear').addEventListener('click', () => {
+                if (!confirmModal) return;
+                confirmModal.classList.remove('hidden');
+                confirmModal.classList.add('flex');
+            });
+
+            function closeConfirmModal() {
+                if (!confirmModal) return;
+                confirmModal.classList.add('hidden');
+                confirmModal.classList.remove('flex');
+            }
+
+            document.getElementById('modal-cancel').addEventListener('click', closeConfirmModal);
+            document.getElementById('modal-confirm').addEventListener('click', () => {
+                appState.profiles[appState.activeProfile].clubs = JSON.parse(JSON.stringify(DEFAULT_CLUBS));
+                appState.profiles[appState.activeProfile].elevation = 0;
+                appState.profiles[appState.activeProfile].temperature = BASE_TEMP_F;
+                yardageData = appState.profiles[appState.activeProfile].clubs;
+                syncProfileUI();
+                saveData();
+                renderTable();
+                closeConfirmModal();
+                showToast('Reset active bag to defaults');
+            });
+
+            loadData();
+            syncProfileUI();
+            renderTable();
+        })();
+    </script>
+    <script>
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => {
+          navigator.serviceWorker.register("./sw.js").catch((err) => console.error("Service worker registration failed:", err));
+        });
+      }
+    </script>
+</body>
+</html>
