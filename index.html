@@ -385,7 +385,7 @@
                     <div class="print-header-left min-w-0 flex-1">
                         <div class="flex items-center gap-2 flex-nowrap min-w-0">
                             <h2 id="card-main-title" class="text-sm sm:text-base font-semibold text-white tracking-wide uppercase truncate">YARDAGE CARD</h2>
-                            <span id="card-profile-badge" class="shrink-0 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-fairway-800/80 text-fairway-200 border border-fairway-600/40 whitespace-nowrap">Matt</span>
+                            <span id="card-profile-badge" class="shrink-0 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-fairway-800/80 text-fairway-200 border border-fairway-600/40 whitespace-nowrap">Profile 1</span>
                         </div>
                         <p class="no-print text-[11px] sm:text-xs text-fairway-300/80 mt-0.5">All distances in yards &bull; Full column displays club-to-club gapping</p>
                     </div>
@@ -403,7 +403,7 @@
                             <path stroke-linecap="round" stroke-linejoin="round" d="M3 17l6-6 4 4 8-8m0 0h-6m6 0v6"/>
                         </svg>
                         <label for="course-preset-select" class="text-xs font-medium text-slate-300 whitespace-nowrap">Course:</label>
-                        <select id="course-preset-select" aria-label="Course elevation preset" class="course-select h-8 min-w-[11.5rem] max-w-[13.5rem] bg-slate-950/90 border border-slate-700 focus:border-fairway-500 focus:outline-none rounded-lg pl-2.5 pr-7 text-xs font-medium text-white cursor-pointer truncate"></select>
+                        <select id="course-preset-select" aria-label="Course elevation preset" class="course-select h-8 w-auto max-w-[calc(100vw-10rem)] bg-slate-950/90 border border-slate-700 focus:border-fairway-500 focus:outline-none rounded-lg pl-2.5 pr-7 text-xs font-medium text-white cursor-pointer"></select>
                         <button id="btn-edit-presets" type="button" title="Customize course presets &amp; favorites" aria-label="Customize course presets &amp; favorites" class="h-8 px-2.5 rounded-lg text-xs font-medium bg-slate-800/80 hover:bg-slate-800 text-slate-300 hover:text-fairway-300 border border-slate-700/80 transition shrink-0">
                             Edit
                         </button>
@@ -590,15 +590,16 @@
             const LEGACY_STORAGE_KEY = 'golf_yardage_matrix_v1';
 
             const DEFAULT_CLUBS = [
-                { id: 'c0', club: 'Driver', tee: '', full: '', contact: '', flighted: '' },
+                { id: 'c0', club: 'Dr', tee: '', full: '', contact: '', flighted: '' },
                 { id: 'c1', club: '3w',     tee: '', full: '', contact: '', flighted: '' },
+                { id: 'c12', club: '5w',    tee: '', full: '', contact: '', flighted: '' },
                 { id: 'c2', club: '4i',     tee: '', full: '', contact: '', flighted: '' },
                 { id: 'c3', club: '5i',     tee: '', full: '', contact: '', flighted: '' },
                 { id: 'c4', club: '6i',     tee: '', full: '', contact: '', flighted: '' },
                 { id: 'c5', club: '7i',     tee: '', full: '', contact: '', flighted: '' },
                 { id: 'c6', club: '8i',     tee: '', full: '', contact: '', flighted: '' },
                 { id: 'c7', club: '9i',     tee: '', full: '', contact: '', flighted: '' },
-                { id: 'c8', club: 'PW',     tee: '', full: '', contact: '', flighted: '' },
+                { id: 'c8', club: 'Pw',     tee: '', full: '', contact: '', flighted: '' },
                 { id: 'c9', club: '50°',    tee: '', full: '', contact: '', flighted: '' },
                 { id: 'c10', club: '54°',   tee: '', full: '', contact: '', flighted: '' },
                 { id: 'c11', club: '58°',   tee: '', full: '', contact: '', flighted: '' }
@@ -650,8 +651,8 @@
                 activeProfile: 0,
                 coursePresets: JSON.parse(JSON.stringify(DEFAULT_COURSE_PRESETS)),
                 profiles: [
-                    { name: 'Matt', elevation: 0, temperature: BASE_TEMP_F, clubs: JSON.parse(JSON.stringify(DEFAULT_CLUBS)) },
-                    { name: 'Jaeric', elevation: 0, temperature: BASE_TEMP_F, clubs: JSON.parse(JSON.stringify(DEFAULT_CLUBS)) }
+                    { name: 'Profile 1', elevation: 0, temperature: BASE_TEMP_F, clubs: JSON.parse(JSON.stringify(DEFAULT_CLUBS)) },
+                    { name: 'Profile 2', elevation: 0, temperature: BASE_TEMP_F, clubs: JSON.parse(JSON.stringify(DEFAULT_CLUBS)) }
                 ]
             };
             let yardageData = appState.profiles[0].clubs;
@@ -768,7 +769,7 @@
             function syncProfileUI() {
                 if (!Array.isArray(appState.profiles) || appState.profiles.length === 0) {
                     appState.profiles = [
-                        { name: 'Matt', elevation: 0, temperature: BASE_TEMP_F, clubs: JSON.parse(JSON.stringify(DEFAULT_CLUBS)) }
+                        { name: 'Profile 1', elevation: 0, temperature: BASE_TEMP_F, clubs: JSON.parse(JSON.stringify(DEFAULT_CLUBS)) }
                     ];
                 }
                 if (appState.activeProfile < 0 || appState.activeProfile >= appState.profiles.length) {
@@ -822,6 +823,25 @@
                 syncConditionsUI();
             }
 
+            // Size the closed course selector to its currently displayed label.
+            // Keep a viewport-based ceiling so unusually long course names don't
+            // push the temperature controls off-screen on mobile.
+            function fitCourseSelectToText() {
+                if (!coursePresetSelect) return;
+                const selectedOption = coursePresetSelect.options[coursePresetSelect.selectedIndex];
+                const label = selectedOption ? selectedOption.textContent : 'Course';
+                const style = window.getComputedStyle(coursePresetSelect);
+                const canvas = fitCourseSelectToText.canvas || (fitCourseSelectToText.canvas = document.createElement('canvas'));
+                const context = canvas.getContext('2d');
+                context.font = style.font;
+                const textWidth = context.measureText(label).width;
+                const horizontalSpace = 12.5 * 2 + 28; // left/right padding plus dropdown arrow
+                const maxWidth = Math.max(112, window.innerWidth - 160);
+                coursePresetSelect.style.width = `${Math.min(maxWidth, Math.ceil(textWidth + horizontalSpace))}px`;
+            }
+
+            window.addEventListener('resize', fitCourseSelectToText);
+
             let courseSelectBound = false;
             function renderCoursePresets() {
                 if (!coursePresetSelect) return;
@@ -856,6 +876,8 @@
                     coursePresetSelect.value = 'custom';
                 }
 
+                fitCourseSelectToText();
+
                 if (!courseSelectBound) {
                     coursePresetSelect.addEventListener('change', (e) => {
                         const val = e.target.value;
@@ -863,6 +885,7 @@
                         const idx = parseInt(val, 10);
                         const chosen = appState.coursePresets[idx];
                         if (!chosen) return;
+                        fitCourseSelectToText();
                         const isBaseline = idx === 0 || isSeaLevelPreset(chosen);
                         const elevVal = isBaseline ? 0 : (Number(chosen.elevation) || 0);
                         appState.profiles[appState.activeProfile].elevation = elevVal;
@@ -1314,8 +1337,26 @@
                 return list;
             }
 
+            // Editor normalization keeps unfinished (blank-name) rows visible while
+            // the user is adding/editing courses. Saved presets are still cleaned
+            // by normalizeCoursePresets() when Save Courses is clicked.
+            function normalizeCoursePresetsForEditor(presets) {
+                const extras = (Array.isArray(presets) ? presets : [])
+                    .filter((p) => p && !isSeaLevelPreset(p))
+                    .map((p) => ({
+                        name: String(p.name ?? ''),
+                        elevation: Number(p.elevation) || 0,
+                        favorite: Boolean(p.favorite)
+                    }));
+                return [
+                    { ...SEA_LEVEL_PRESET },
+                    ...extras.filter((p) => p.favorite),
+                    ...extras.filter((p) => !p.favorite)
+                ];
+            }
+
             function renderPresetsEditorList(presetsToEdit) {
-                const normalized = normalizeCoursePresets(presetsToEdit);
+                const normalized = normalizeCoursePresetsForEditor(presetsToEdit);
                 presetsEditorList.innerHTML = '';
                 normalized.forEach((preset, idx) => {
                     const isLockedRow = idx === 0 || isSeaLevelPreset(preset);
@@ -1369,10 +1410,7 @@
 
             document.getElementById('btn-add-preset-row').addEventListener('click', () => {
                 draftPresets = collectDraftPresetsFromDOM();
-                if (draftPresets.length >= 8) {
-                    showToast('Maximum of 8 course presets');
-                    return;
-                }
+                // No fixed course-count limit; add another editable row.
                 draftPresets.push({ name: '', elevation: 0, favorite: false });
                 renderPresetsEditorList(draftPresets);
             });
@@ -1384,7 +1422,7 @@
                     const idx = parseInt(favBtn.dataset.toggleFav, 10);
                     if (idx > 0 && draftPresets[idx]) {
                         draftPresets[idx].favorite = !draftPresets[idx].favorite;
-                        draftPresets = normalizeCoursePresets(draftPresets);
+                        draftPresets = normalizeCoursePresetsForEditor(draftPresets);
                         renderPresetsEditorList(draftPresets);
                     }
                     return;
